@@ -1,54 +1,52 @@
 package com.example.yape_payment_scraper
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
-import android.widget.Button   // <-- IMPORTANTE: Añadir esto
-import android.widget.TextView  // <-- IMPORTANTE: Añadir esto
-import androidx.activity.enableEdgeToEdge
+import android.widget.Button
+import android.widget.TextView
+import androidx.activity.enableEdgeToEdge // <-- Esto se encarga de todo
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+// Ya no necesitas 'ViewCompat' ni 'WindowInsetsCompat' aquí
 
 class MainActivity : AppCompatActivity() {
 
-    // 1. Variable para guardar el estado actual
     private var isServiceOn = false
+
+    private val colorEncendido = Color.parseColor("#4CAF50") // Verde
+    private val colorApagado = Color.parseColor("#F1F1F1")   // Gris claro
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Esta línea es la única que necesitas para los márgenes
         enableEdgeToEdge()
+
         setContentView(R.layout.activity_main)
 
-        // --- INICIO DE LA LÓGICA DEL BOTÓN ---
-
-        // 2. Encontrar las vistas (el botón y el texto) por su ID
         val statusTextView: TextView = findViewById(R.id.statusTextView)
         val toggleButton: Button = findViewById(R.id.toggleButton)
 
-        // 3. Ponerle un "escuchador" de clics al botón
         toggleButton.setOnClickListener {
+            isServiceOn = !isServiceOn
 
-            // 4. Invertir el estado
-            isServiceOn = !isServiceOn // Si es true, lo vuelve false (y viceversa)
-
-            // 5. Actualizar los textos según el nuevo estado
             if (isServiceOn) {
-                // Si el servicio está ENCENDIDO
+                // Estado ENCENDIDO
                 statusTextView.text = "Estado: Encendido"
                 toggleButton.text = "Apagar"
+                statusTextView.backgroundTintList = ColorStateList.valueOf(colorEncendido)
+                statusTextView.setTextColor(Color.WHITE)
+
             } else {
-                // Si el servicio está APAGADO
+                // Estado APAGADO
                 statusTextView.text = "Estado: Apagado"
                 toggleButton.text = "Encender"
+                statusTextView.backgroundTintList = ColorStateList.valueOf(colorApagado)
+                statusTextView.setTextColor(Color.parseColor("#333333"))
             }
         }
 
-        // --- FIN DE LA LÓGICA DEL BOTÓN ---
-
-        // Este es el código que ya tenías para ajustar los bordes
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        // --- BORRAMOS EL BLOQUE "ViewCompat.setOnApplyWindowInsetsListener" DE AQUÍ ---
+        // Ya no es necesario
     }
 }
