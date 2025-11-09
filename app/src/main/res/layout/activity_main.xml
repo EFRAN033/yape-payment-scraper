@@ -97,21 +97,5 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        app:headerLayout="@layout/nav_header">
-
-        <menu>
-            <group android:checkableBehavior="single">
-                <item
-                    android:id="@+id/nav_home"
-                    android:icon="@drawable/ic_power"
-                    android:title="Monitor" />
-                <item
-                    android:id="@+id/nav_history"
-                    android:icon="@drawable/ic_history"
-                    android:title="Historial" />
-            </group>
-        </menu>
-
-    </com.google.android.material.navigation.NavigationView>
-
-</androidx.drawerlayout.widget.DrawerLayout>
+        app:headerLayout="@layout/nav_header"
+        app:menu="@menu/drawer_menu" /> </androidx.drawerlayout.widget.DrawerLayout>
