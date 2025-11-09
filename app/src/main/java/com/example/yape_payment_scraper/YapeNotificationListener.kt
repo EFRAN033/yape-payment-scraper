@@ -38,29 +38,39 @@ class YapeNotificationListener : NotificationListenerService() {
     // El ID de paquete de Yape
     private val YAPE_PACKAGE_NAME = "com.bcp.yape"
 
-    // --- ¡AQUÍ ESTÁ LA MODIFICACIÓN! ---
-    // Esta Regex ahora acepta "te yapeó" O "te envió un pago por"
-    // private val paymentRegex = Regex("(.+?) te yapeó S/ (\\d+\\.?\\d*)") // <-- LÍNEA ANTIGUA
-    private val paymentRegex = Regex("(?:Yape! )?(.+?) te (?:yapeó|envió un pago por) S/ (\\d+\\.?\\d*)") // <-- LÍNEA NUEVA
-    // --- FIN DE LA MODIFICACIÓN ---
+    // La Regex para extraer los pagos (coincide con tu imagen)
+    private val paymentRegex = Regex("(?:Yape! )?(.+?) te (?:yapeó|envió un pago por) S/ (\\d+\\.?\\d*)")
 
-    // --- CÓDIGO NUEVO PARA EL SERVICIO EN PRIMER PLANO ---
+    // --- CÓDIGO DEL SERVICIO EN PRIMER PLANO ---
 
     companion object {
         private const val CHANNEL_ID = "YapeScraperServiceChannel"
         private const val NOTIFICATION_ID = 1
 
+        // --- ¡NUEVO! ---
+        // Claves para el estado interno y el archivo de SharedPreferences
+        const val PREF_SCANNING_ENABLED = "scanning_enabled"
+        const val PREF_FILE_NAME = "YapePaymentHistory" // Reutilizamos el mismo nombre
+
         // Función estática para obtener el historial (sin cambios)
         fun getPaymentHistory(context: Context): List<PaymentRecord> {
-            val sharedPrefs = context.getSharedPreferences("YapePaymentHistory", Context.MODE_PRIVATE)
+            val sharedPrefs = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE) // Usamos la constante
             val historySet = sharedPrefs.getStringSet("history_list", emptySet()) ?: emptySet()
             return historySet.mapNotNull { PaymentRecord.fromString(it) }.sortedByDescending { it.timestamp }
+        }
+
+        // --- ¡NUEVO! ---
+        // Función de ayuda para saber si el escaneo está activado por el usuario
+        private fun isScanningEnabled(context: Context): Boolean {
+            val sharedPrefs = context.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE)
+            // Por defecto, está apagado
+            return sharedPrefs.getBoolean(PREF_SCANNING_ENABLED, false)
         }
     }
 
     /**
      * Se llama cuando el servicio se crea.
-     * Aquí es donde iniciamos el modo de primer plano.
+     * (Sin cambios)
      */
     override fun onCreate() {
         super.onCreate()
@@ -72,6 +82,7 @@ class YapeNotificationListener : NotificationListenerService() {
 
     /**
      * Crea el canal de notificación (necesario para Android 8.0+).
+     * (Sin cambios)
      */
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -87,6 +98,7 @@ class YapeNotificationListener : NotificationListenerService() {
 
     /**
      * Construye la notificación persistente.
+     * (Sin cambios)
      */
     private fun createNotification(): Notification {
         // Intent para abrir MainActivity cuando se toca la notificación
@@ -110,6 +122,7 @@ class YapeNotificationListener : NotificationListenerService() {
 
     /**
      * Se llama cuando el servicio se destruye (ej. el usuario quita el permiso).
+     * (Sin cambios)
      */
     override fun onDestroy() {
         super.onDestroy()
@@ -117,26 +130,37 @@ class YapeNotificationListener : NotificationListenerService() {
         Log.d("YapeScraper", "Servicio detenido.")
     }
 
+    /**
+     * ¡AQUÍ ESTÁ LA LÓGICA MEJORADA!
+     * Se llama cuando llega una nueva notificación.
+     */
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
 
         if (sbn == null) return
 
-        // 1. Filtramos para que solo reaccione a notificaciones de Yape
+        // --- ¡LÓGICA MEJORADA! ---
+        // 1. Verificamos si el usuario quiere escanear (nuestro interruptor interno)
+        if (!isScanningEnabled(this)) {
+            Log.d("YapeScraper", "Servicio pausado por el usuario. Ignorando notificación.")
+            return // No hacer nada si está apagado
+        }
+
+        // 2. Filtramos para que solo reaccione a notificaciones de Yape
         if (sbn.packageName == YAPE_PACKAGE_NAME) {
 
-            // 2. Extraemos el contenido de la notificación
+            // 3. Extraemos el contenido de la notificación
             val notification = sbn.notification
             val extras = notification.extras
 
             val title = extras.getString("android.title")?.toString() ?: ""
             val text = extras.getString("android.text")?.toString() ?: ""
 
-            Log.d("YapeScraper", "Notificación de Yape recibida:")
+            Log.d("YapeScraper", "Notificación de Yape recibida (Servicio ON):")
             Log.d("YapeScraper", "Título: $title")
             Log.d("YapeScraper", "Texto: $text")
 
-            // 3. ¡AQUÍ HACES EL "SCRAPING"!
+            // 4. ¡AQUÍ HACES EL "SCRAPING"!
             val matchResult = paymentRegex.find(text)
 
             if (matchResult != null) {
@@ -146,7 +170,7 @@ class YapeNotificationListener : NotificationListenerService() {
 
                 Log.d("YapeScraper", "Pago detectado. Remitente: ${paymentRecord.senderName}, Monto: S/ ${paymentRecord.amount}")
 
-                // 4. Guardar en el Historial
+                // 5. Guardar en el Historial
                 savePaymentRecord(paymentRecord)
 
             } else {
@@ -161,7 +185,7 @@ class YapeNotificationListener : NotificationListenerService() {
 
     // --- Lógica de persistencia de datos (usando SharedPreferences) ---
     private fun savePaymentRecord(record: PaymentRecord) {
-        val sharedPrefs = getSharedPreferences("YapePaymentHistory", Context.MODE_PRIVATE)
+        val sharedPrefs = getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE) // Usamos la constante
         val editor = sharedPrefs.edit()
         val currentHistory = sharedPrefs.getStringSet("history_list", mutableSetOf()) ?: mutableSetOf()
         val newHistory = HashSet(currentHistory)
