@@ -1,3 +1,13 @@
 <resources>
-    <string name="app_name">yape-payment-scraper</string>
+    <string name="app_name">Yape Scraper</string>
+
+    <string name="main_title">Monitor de Pagos Yape</string>
+    <string name="main_description">Servicio de monitoreo de notificaciones</string>
+
+    <string name="status_on">Estado: Encendido</string>
+    <string name="status_off">Estado: Apagado</string>
+    <string name="button_turn_on">Encender Servicio</string>
+    <string name="button_turn_off">Apagar Servicio</string>
+    <string name="navigation_drawer_open">Abrir menú</string>
+    <string name="navigation_drawer_close">Cerrar menú</string>
 </resources>

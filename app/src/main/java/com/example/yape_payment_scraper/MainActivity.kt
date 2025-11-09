@@ -1,52 +1,140 @@
 package com.example.yape_payment_scraper
 
+import android.content.ComponentName
+import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
-import android.widget.Button
+import android.provider.Settings
+import android.view.MenuItem
+import android.widget.ImageButton
 import android.widget.TextView
-import androidx.activity.enableEdgeToEdge // <-- Esto se encarga de todo
+import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
-// Ya no necesitas 'ViewCompat' ni 'WindowInsetsCompat' aquí
+import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import com.google.android.material.navigation.NavigationView
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
-    private var isServiceOn = false
+    private var isServiceEnabled = false
 
-    private val colorEncendido = Color.parseColor("#4CAF50") // Verde
-    private val colorApagado = Color.parseColor("#F1F1F1")   // Gris claro
+    // Vistas del Sidebar
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var navigationView: NavigationView
+    private lateinit var toolbar: Toolbar
+
+    // Vistas de la UI (las que ya tenías)
+    private lateinit var powerButton: ImageButton
+    private lateinit var statusTextView: TextView
+    private lateinit var descriptionTextView: TextView
+
+    // Colores
+    private val colorWhite by lazy { ContextCompat.getColor(this, R.color.white) }
+    private val colorBlack by lazy { ContextCompat.getColor(this, R.color.black) }
+    private val colorStatusOff by lazy { ContextCompat.getColor(this, R.color.status_off) }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Esta línea es la única que necesitas para los márgenes
-        enableEdgeToEdge()
-
+        enableEdgeToEdge() // Esto puede causar problemas con el layout nuevo, si falla, coméntalo.
         setContentView(R.layout.activity_main)
 
-        val statusTextView: TextView = findViewById(R.id.statusTextView)
-        val toggleButton: Button = findViewById(R.id.toggleButton)
+        // --- Configuración del Sidebar (NUEVO) ---
+        toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
 
-        toggleButton.setOnClickListener {
-            isServiceOn = !isServiceOn
+        drawerLayout = findViewById(R.id.drawer_layout)
+        navigationView = findViewById(R.id.nav_view)
+        navigationView.setNavigationItemSelectedListener(this)
 
-            if (isServiceOn) {
-                // Estado ENCENDIDO
-                statusTextView.text = "Estado: Encendido"
-                toggleButton.text = "Apagar"
-                statusTextView.backgroundTintList = ColorStateList.valueOf(colorEncendido)
-                statusTextView.setTextColor(Color.WHITE)
+        val toggle = ActionBarDrawerToggle(
+            this, drawerLayout, toolbar,
+            R.string.navigation_drawer_open, // (Necesitarás añadir estos strings en strings.xml)
+            R.string.navigation_drawer_close
+        )
+        drawerLayout.addDrawerListener(toggle)
+        toggle.syncState()
 
-            } else {
-                // Estado APAGADO
-                statusTextView.text = "Estado: Apagado"
-                toggleButton.text = "Encender"
-                statusTextView.backgroundTintList = ColorStateList.valueOf(colorApagado)
-                statusTextView.setTextColor(Color.parseColor("#333333"))
+        // Marcar "Monitor" (Home) como seleccionado al inicio
+        navigationView.setCheckedItem(R.id.nav_home)
+
+        // --- Configuración del Botón de Encendido (Tu código anterior) ---
+        powerButton = findViewById(R.id.powerButton)
+        statusTextView = findViewById(R.id.statusTextView)
+        descriptionTextView = findViewById(R.id.descriptionTextView)
+
+        powerButton.setOnClickListener {
+            if (!isServiceEnabled) {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             }
         }
+    }
 
-        // --- BORRAMOS EL BLOQUE "ViewCompat.setOnApplyWindowInsetsListener" DE AQUÍ ---
-        // Ya no es necesario
+    override fun onResume() {
+        super.onResume()
+        isServiceEnabled = isNotificationServiceEnabled()
+        updateUI()
+    }
+
+    /**
+     * Maneja los clics en los ítems del sidebar
+     */
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.nav_home -> {
+                // No hacemos nada, ya estamos aquí
+            }
+            R.id.nav_history -> {
+                // TODO: Aquí lanzarías la nueva Activity de Historial
+                Toast.makeText(this, "Abriendo Historial...", Toast.LENGTH_SHORT).show()
+                // Por ejemplo: startActivity(Intent(this, HistoryActivity::class.java))
+            }
+        }
+        drawerLayout.closeDrawer(GravityCompat.START)
+        return true
+    }
+
+    /**
+     * Cierra el sidebar si está abierto al presionar "Atrás"
+     */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START)
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    // --- Tus funciones de antes ---
+
+    private fun isNotificationServiceEnabled(): Boolean {
+        val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+        val componentName = ComponentName(this, YapeNotificationListener::class.java)
+        return enabledListeners?.contains(componentName.flattenToString()) == true
+    }
+
+    private fun updateUI() {
+        if (isServiceEnabled) {
+            powerButton.setBackgroundResource(R.drawable.button_state_on)
+            powerButton.setImageResource(R.drawable.ic_check)
+            powerButton.imageTintList = ColorStateList.valueOf(colorWhite)
+            powerButton.contentDescription = getString(R.string.button_turn_off)
+            statusTextView.text = getString(R.string.status_on)
+            statusTextView.setTextColor(colorWhite)
+            descriptionTextView.setTextColor(colorWhite)
+        } else {
+            powerButton.setBackgroundResource(R.drawable.button_state_off)
+            powerButton.setImageResource(R.drawable.ic_power)
+            powerButton.imageTintList = ColorStateList.valueOf(colorBlack)
+            powerButton.contentDescription = getString(R.string.button_turn_on)
+            statusTextView.text = getString(R.string.status_off)
+            statusTextView.setTextColor(colorStatusOff)
+            descriptionTextView.setTextColor(colorStatusOff)
+        }
     }
 }
