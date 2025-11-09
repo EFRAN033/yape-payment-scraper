@@ -10,7 +10,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.addCallback // ¡Asegúrate de que este import esté!
+import androidx.activity.addCallback
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -28,66 +28,74 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var navigationView: NavigationView
     private lateinit var toolbar: Toolbar
 
-    // Vistas de la UI (las que ya tenías)
+    // Vistas de la UI
     private lateinit var powerButton: ImageButton
     private lateinit var statusTextView: TextView
     private lateinit var descriptionTextView: TextView
 
-    // Colores
+    // Colores (Inicializados de forma perezosa para el contexto)
     private val colorWhite by lazy { ContextCompat.getColor(this, R.color.white) }
     private val colorBlack by lazy { ContextCompat.getColor(this, R.color.black) }
     private val colorStatusOff by lazy { ContextCompat.getColor(this, R.color.status_off) }
-
+    // ⬇️ CORRECCIÓN 1: El color correcto en colors.xml es yape_accent_yellow, no yape_yellow.
+    private val colorYapeYellow by lazy { ContextCompat.getColor(this, R.color.yape_accent_yellow) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        // --- Configuración del Sidebar ---
-        toolbar = findViewById(R.id.toolbar)
-        setSupportActionBar(toolbar)
-
+        // Inicialización de Vistas
         drawerLayout = findViewById(R.id.drawer_layout)
         navigationView = findViewById(R.id.nav_view)
-        navigationView.setNavigationItemSelectedListener(this)
+        toolbar = findViewById(R.id.toolbar)
+        // ⬇️ CORRECCIÓN 2, 3 y 4: Los IDs en activity_main.xml usan CamelCase, no snake_case.
+        powerButton = findViewById(R.id.powerButton)
+        statusTextView = findViewById(R.id.statusTextView)
+        descriptionTextView = findViewById(R.id.descriptionTextView)
 
+        // Configurar la Toolbar como ActionBar
+        setSupportActionBar(toolbar)
+        // Asume que R.string.app_name existe
+        supportActionBar?.setTitle(R.string.app_name)
+
+        // Configurar el Navigation Drawer
         val toggle = ActionBarDrawerToggle(
-            this, drawerLayout, toolbar,
+            this,
+            drawerLayout,
+            toolbar,
             R.string.navigation_drawer_open,
             R.string.navigation_drawer_close
         )
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
+        navigationView.setNavigationItemSelectedListener(this)
 
-        // Marcar "Monitor" (Home) como seleccionado al inicio
-        navigationView.setCheckedItem(R.id.nav_home)
-
-        // --- Configuración del Botón de Encendido ---
-        powerButton = findViewById(R.id.powerButton)
-        statusTextView = findViewById(R.id.statusTextView)
-        descriptionTextView = findViewById(R.id.descriptionTextView)
-
+        // Manejar el botón de encendido/apagado (Power Button)
         powerButton.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            // Abrir la configuración para que el usuario pueda activar/desactivar el servicio
+            if (!isServiceEnabled) {
+                val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                startActivity(intent)
+                // El estado de la UI se actualizará en onResume()
+            } else {
+                Toast.makeText(this, "Para desactivar, hazlo desde Configuración > Notificaciones > Acceso especial a Notificaciones", Toast.LENGTH_LONG).show()
+            }
         }
 
-        // --- NUEVO MANEJO DEL BOTÓN "ATRÁS" ---
-        // Esto reemplaza la función onBackPressed() obsoleta
+        // Manejar el botón de retroceso (Back Button)
         onBackPressedDispatcher.addCallback(this) {
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                 drawerLayout.closeDrawer(GravityCompat.START)
             } else {
-                // Si el menú no está abierto, ejecuta el comportamiento
-                // normal del botón "atrás" (salir de la app).
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
+                finish() // Cierra la Activity si el drawer está cerrado
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
+        // Actualizar el estado del servicio cada vez que la Activity vuelve al primer plano
         isServiceEnabled = isNotificationServiceEnabled()
         updateUI()
     }
@@ -101,29 +109,32 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 // No hacemos nada, ya estamos aquí
             }
             R.id.nav_history -> {
-                // TODO: Aquí lanzarías la nueva Activity de Historial
-                Toast.makeText(this, "Abriendo Historial...", Toast.LENGTH_SHORT).show()
-                // Por ejemplo: startActivity(Intent(this, HistoryActivity::class.java))
+                // Lógica AGREGADA para lanzar la nueva Activity de Historial
+                startActivity(Intent(this, HistoryActivity::class.java))
             }
         }
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
     }
 
-    // --- SE ELIMINÓ LA FUNCIÓN onBackPressed() ---
-    // Ya no es necesaria, su lógica está en el onCreate.
 
+    // --- Funciones de Ayuda ---
 
-    // --- Tus funciones de antes ---
-
+    /**
+     * Verifica si nuestro NotificationListenerService está activo en la configuración del sistema.
+     */
     private fun isNotificationServiceEnabled(): Boolean {
         val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
         val componentName = ComponentName(this, YapeNotificationListener::class.java)
         return enabledListeners?.contains(componentName.flattenToString()) == true
     }
 
+    /**
+     * Actualiza la UI (botón de encendido y textos de estado) según el estado del servicio.
+     */
     private fun updateUI() {
         if (isServiceEnabled) {
+            // Estado ON (Activado)
             powerButton.setBackgroundResource(R.drawable.button_state_on)
             powerButton.setImageResource(R.drawable.ic_check)
             powerButton.imageTintList = ColorStateList.valueOf(colorWhite)
@@ -132,6 +143,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             statusTextView.setTextColor(colorWhite)
             descriptionTextView.setTextColor(colorWhite)
         } else {
+            // Estado OFF (Desactivado)
             powerButton.setBackgroundResource(R.drawable.button_state_off)
             powerButton.setImageResource(R.drawable.ic_power)
             powerButton.imageTintList = ColorStateList.valueOf(colorBlack)
