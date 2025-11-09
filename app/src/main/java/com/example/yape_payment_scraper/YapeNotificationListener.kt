@@ -38,8 +38,11 @@ class YapeNotificationListener : NotificationListenerService() {
     // El ID de paquete de Yape
     private val YAPE_PACKAGE_NAME = "com.bcp.yape"
 
-    // Regex (sin cambios)
-    private val paymentRegex = Regex("(.+?) te yapeó S/ (\\d+\\.?\\d*)")
+    // --- ¡AQUÍ ESTÁ LA MODIFICACIÓN! ---
+    // Esta Regex ahora acepta "te yapeó" O "te envió un pago por"
+    // private val paymentRegex = Regex("(.+?) te yapeó S/ (\\d+\\.?\\d*)") // <-- LÍNEA ANTIGUA
+    private val paymentRegex = Regex("(?:Yape! )?(.+?) te (?:yapeó|envió un pago por) S/ (\\d+\\.?\\d*)") // <-- LÍNEA NUEVA
+    // --- FIN DE LA MODIFICACIÓN ---
 
     // --- CÓDIGO NUEVO PARA EL SERVICIO EN PRIMER PLANO ---
 
@@ -137,6 +140,7 @@ class YapeNotificationListener : NotificationListenerService() {
             val matchResult = paymentRegex.find(text)
 
             if (matchResult != null) {
+                // El grupo 1 es el nombre, el grupo 2 es el monto
                 val (senderName, amount) = matchResult.destructured
                 val paymentRecord = PaymentRecord(senderName.trim(), amount)
 
