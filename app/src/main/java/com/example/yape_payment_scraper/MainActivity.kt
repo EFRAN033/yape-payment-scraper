@@ -10,6 +10,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.addCallback // ¡Asegúrate de que este import esté!
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -40,10 +41,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // Esto puede causar problemas con el layout nuevo, si falla, coméntalo.
+        enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        // --- Configuración del Sidebar (NUEVO) ---
+        // --- Configuración del Sidebar ---
         toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -53,7 +54,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val toggle = ActionBarDrawerToggle(
             this, drawerLayout, toolbar,
-            R.string.navigation_drawer_open, // (Necesitarás añadir estos strings en strings.xml)
+            R.string.navigation_drawer_open,
             R.string.navigation_drawer_close
         )
         drawerLayout.addDrawerListener(toggle)
@@ -62,14 +63,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Marcar "Monitor" (Home) como seleccionado al inicio
         navigationView.setCheckedItem(R.id.nav_home)
 
-        // --- Configuración del Botón de Encendido (Tu código anterior) ---
+        // --- Configuración del Botón de Encendido ---
         powerButton = findViewById(R.id.powerButton)
         statusTextView = findViewById(R.id.statusTextView)
         descriptionTextView = findViewById(R.id.descriptionTextView)
 
         powerButton.setOnClickListener {
-            if (!isServiceEnabled) {
-                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+
+        // --- NUEVO MANEJO DEL BOTÓN "ATRÁS" ---
+        // Esto reemplaza la función onBackPressed() obsoleta
+        onBackPressedDispatcher.addCallback(this) {
+            if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                drawerLayout.closeDrawer(GravityCompat.START)
+            } else {
+                // Si el menú no está abierto, ejecuta el comportamiento
+                // normal del botón "atrás" (salir de la app).
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
             }
         }
     }
@@ -98,17 +110,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return true
     }
 
-    /**
-     * Cierra el sidebar si está abierto al presionar "Atrás"
-     */
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START)
-        } else {
-            super.onBackPressed()
-        }
-    }
+    // --- SE ELIMINÓ LA FUNCIÓN onBackPressed() ---
+    // Ya no es necesaria, su lógica está en el onCreate.
+
 
     // --- Tus funciones de antes ---
 
