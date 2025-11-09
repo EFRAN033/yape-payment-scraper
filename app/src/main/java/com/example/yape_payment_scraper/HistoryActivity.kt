@@ -5,6 +5,7 @@ import android.widget.ArrayAdapter
 import android.widget.ListView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar // <-- Importante
 
 class HistoryActivity : AppCompatActivity() {
 
@@ -12,6 +13,10 @@ class HistoryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_history)
+
+        // ⬇️ Encontrar la Toolbar y establecerla como ActionBar
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
 
         // Establecer la barra de título
         supportActionBar?.setTitle("Historial de Pagos")

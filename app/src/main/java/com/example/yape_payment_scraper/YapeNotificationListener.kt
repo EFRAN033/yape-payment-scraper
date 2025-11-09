@@ -1,12 +1,18 @@
 package com.example.yape_payment_scraper
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.core.app.NotificationCompat
 
-// 1. Data Class para el Registro de Pago y métodos de serialización/deserialización
-// Nota: Se usa una serialización simple con "|" para evitar añadir librerías de JSON (como Gson).
+// 1. Data Class para el Registro de Pago (sin cambios)
 data class PaymentRecord(
     val senderName: String,
     val amount: String,
@@ -32,9 +38,81 @@ class YapeNotificationListener : NotificationListenerService() {
     // El ID de paquete de Yape
     private val YAPE_PACKAGE_NAME = "com.bcp.yape"
 
-    // Regex para buscar el patrón "\[Nombre] te yapeó S/ \[Monto]"
-    // Captura: (Nombre), (Monto)
+    // Regex (sin cambios)
     private val paymentRegex = Regex("(.+?) te yapeó S/ (\\d+\\.?\\d*)")
+
+    // --- CÓDIGO NUEVO PARA EL SERVICIO EN PRIMER PLANO ---
+
+    companion object {
+        private const val CHANNEL_ID = "YapeScraperServiceChannel"
+        private const val NOTIFICATION_ID = 1
+
+        // Función estática para obtener el historial (sin cambios)
+        fun getPaymentHistory(context: Context): List<PaymentRecord> {
+            val sharedPrefs = context.getSharedPreferences("YapePaymentHistory", Context.MODE_PRIVATE)
+            val historySet = sharedPrefs.getStringSet("history_list", emptySet()) ?: emptySet()
+            return historySet.mapNotNull { PaymentRecord.fromString(it) }.sortedByDescending { it.timestamp }
+        }
+    }
+
+    /**
+     * Se llama cuando el servicio se crea.
+     * Aquí es donde iniciamos el modo de primer plano.
+     */
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+        val notification = createNotification()
+        startForeground(NOTIFICATION_ID, notification)
+        Log.d("YapeScraper", "Servicio iniciado en primer plano.")
+    }
+
+    /**
+     * Crea el canal de notificación (necesario para Android 8.0+).
+     */
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceChannel = NotificationChannel(
+                CHANNEL_ID,
+                "Yape Scraper Service",
+                NotificationManager.IMPORTANCE_LOW // Poca importancia para que no sea intrusiva
+            )
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(serviceChannel)
+        }
+    }
+
+    /**
+     * Construye la notificación persistente.
+     */
+    private fun createNotification(): Notification {
+        // Intent para abrir MainActivity cuando se toca la notificación
+        val notificationIntent = Intent(this, MainActivity::class.java)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            notificationIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Construir la notificación
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Monitor de Yape Activo")
+            .setContentText("Escuchando nuevas notificaciones de pago...")
+            .setSmallIcon(R.drawable.ic_check) // Reutilizamos tu ícono de "check"
+            .setContentIntent(pendingIntent)
+            .setOngoing(true) // Hacerla persistente
+            .build()
+    }
+
+    /**
+     * Se llama cuando el servicio se destruye (ej. el usuario quita el permiso).
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+        stopForeground(STOP_FOREGROUND_REMOVE) // <-- Corrección
+        Log.d("YapeScraper", "Servicio detenido.")
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
@@ -81,28 +159,11 @@ class YapeNotificationListener : NotificationListenerService() {
     private fun savePaymentRecord(record: PaymentRecord) {
         val sharedPrefs = getSharedPreferences("YapePaymentHistory", Context.MODE_PRIVATE)
         val editor = sharedPrefs.edit()
-
-        // 1. Recuperar la lista actual de registros guardados como una lista de strings (Set)
         val currentHistory = sharedPrefs.getStringSet("history_list", mutableSetOf()) ?: mutableSetOf()
-
-        // 2. Agregar el nuevo registro.
         val newHistory = HashSet(currentHistory)
         newHistory.add(record.toString())
-
-        // 3. Guardar el set actualizado.
         editor.putStringSet("history_list", newHistory)
         editor.apply()
-
         Log.d("YapeScraper", "Registro guardado. Total de registros: ${newHistory.size}")
-    }
-
-    companion object {
-        // Función estática para obtener el historial desde cualquier Activity
-        fun getPaymentHistory(context: Context): List<PaymentRecord> {
-            val sharedPrefs = context.getSharedPreferences("YapePaymentHistory", Context.MODE_PRIVATE)
-            val historySet = sharedPrefs.getStringSet("history_list", emptySet()) ?: emptySet()
-            // Mapear los Strings guardados de vuelta a PaymentRecord y ordenar por timestamp
-            return historySet.mapNotNull { PaymentRecord.fromString(it) }.sortedByDescending { it.timestamp }
-        }
     }
 }
