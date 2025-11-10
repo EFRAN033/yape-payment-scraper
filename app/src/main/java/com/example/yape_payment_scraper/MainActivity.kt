@@ -2,6 +2,7 @@ package com.example.yape_payment_scraper
 
 import android.Manifest
 import android.content.ComponentName
+import android.content.Context // <-- IMPORT AÑADIDO
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -130,6 +131,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
      * Actualiza la UI (botón de encendido y textos de estado) según el estado del servicio.
      */
     private fun updateUI() {
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Accede a las SharedPreferences que usa el servicio
+        val sharedPrefs = getSharedPreferences(YapeNotificationListener.PREF_FILE_NAME, Context.MODE_PRIVATE)
+        val editor = sharedPrefs.edit()
+        // --- FIN DE LA MODIFICACIÓN ---
+
         if (isServiceEnabled) {
             // Estado ON (Activado)
             powerButton.setBackgroundResource(R.drawable.button_state_on)
@@ -139,6 +146,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             statusTextView.text = getString(R.string.status_on)
             statusTextView.setTextColor(colorWhite)
             descriptionTextView.setTextColor(colorWhite)
+
+            // --- INICIO DE LA MODIFICACIÓN ---
+            // Sincroniza el interruptor interno del servicio: PONER EN ON
+            editor.putBoolean(YapeNotificationListener.PREF_SCANNING_ENABLED, true)
+            // --- FIN DE LA MODIFICACIÓN ---
+
         } else {
             // Estado OFF (Desactivado)
             powerButton.setBackgroundResource(R.drawable.button_state_off)
@@ -148,7 +161,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             statusTextView.text = getString(R.string.status_off)
             statusTextView.setTextColor(colorStatusOff)
             descriptionTextView.setTextColor(colorStatusOff)
+
+            // --- INICIO DE LA MODIFICACIÓN ---
+            // Sincroniza el interruptor interno del servicio: PONER EN OFF
+            editor.putBoolean(YapeNotificationListener.PREF_SCANNING_ENABLED, false)
+            // --- FIN DE LA MODIFICACIÓN ---
         }
+
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Aplica los cambios a SharedPreferences
+        editor.apply()
+        // --- FIN DE LA MODIFICACIÓN ---
     }
 
     // --- CÓDIGO NUEVO PARA PERMISOS ---
