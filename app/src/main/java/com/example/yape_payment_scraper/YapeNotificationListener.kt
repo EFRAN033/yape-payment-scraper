@@ -10,7 +10,7 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationCompatz
 
 // 1. Data Class para el Registro de Pago (sin cambios)
 data class PaymentRecord(
