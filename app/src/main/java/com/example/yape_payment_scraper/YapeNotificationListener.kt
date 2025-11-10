@@ -11,6 +11,17 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationCompat
+// --- IMPORTS AÑADIDOS ---
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.Body
+import retrofit2.http.Header
+import retrofit2.http.POST
+// --- FIN DE IMPORTS AÑADIDOS ---
+
 
 data class PaymentRecord(
     val senderName: String,
@@ -157,6 +168,74 @@ class YapeNotificationListener : NotificationListenerService() {
         newHistory.add(record.toString())
         editor.putStringSet("history_list", newHistory)
         editor.apply()
-        Log.d("YapeScraper", "Registro guardado. Totall de registros: ${newHistory.size}")
+        Log.d("YapeScraper", "Registro guardado. Total de registros: ${newHistory.size}")
+
+        // --- ¡MODIFICACIÓN! LLAMAR AL BACKEND ---
+        sendPaymentToBackend(record)
+    }
+
+    // --- ¡NUEVA FUNCIÓN AÑADIDA! ---
+    private fun sendPaymentToBackend(record: PaymentRecord) {
+        val payload = YapePaymentPayload(
+            sender_name = record.senderName,
+            amount = record.amount
+        )
+
+        // !!! IMPORTANTE: CAMBIA ESTA CLAVE POR LA QUE INVENTASTE !!!
+        // (Esta debe ser la misma que pusiste en el .env de tu backend)
+        val apiKey = "clave-secreta-de-yape-para-kambia-pe-8373jd9"
+
+        Log.d("YapeScraper", "Enviando pago al backend...")
+
+        RetrofitClient.instance.confirmPayment(apiKey, payload).enqueue(object : Callback<Unit> {
+            override fun onResponse(call: Call<Unit>, response: Response<Unit>) {
+                if (response.isSuccessful) {
+                    Log.d("YapeScraper", "¡Pago enviado al backend exitosamente! Código: ${response.code()}")
+                } else {
+                    // El backend respondió con un error (ej. 401, 404, 500)
+                    Log.e("YapeScraper", "Error al enviar pago. Código: ${response.code()}")
+                    Log.e("YapeScraper", "Mensaje: ${response.errorBody()?.string()}")
+                }
+            }
+
+            override fun onFailure(call: Call<Unit>, t: Throwable) {
+                // Fallo de red (ej. no hay internet, no se encuentra el dominio)
+                Log.e("YapeScraper", "Fallo de red al enviar pago: ${t.message}")
+            }
+        })
     }
 }
+
+
+// --- INICIO: CÓDIGO DE RED AÑADIDO (al final del archivo) ---
+
+// 1. Modelo de datos (debe coincidir con el Pydantic de Python)
+data class YapePaymentPayload(
+    val sender_name: String,
+    val amount: String
+)
+
+// 2. Interfaz de Retrofit
+interface ApiService {
+    @POST("/api/v1/confirm-yape-payment") // Esta es la ruta de tu API en KambiaPe
+    fun confirmPayment(
+        @Header("x-api-key") apiKey: String,
+        @Body payload: YapePaymentPayload
+    ): Call<Unit> // No necesitamos una respuesta, solo saber si se envió (Call<Unit>)
+}
+
+// 3. Objeto Singleton para crear el cliente de Retrofit
+object RetrofitClient {
+    // !!! IMPORTANTE: CAMBIA ESTO POR LA URL DE TU BACKEND !!!
+    // (Ejemplo: "https://kambia-pe-backend.onrender.com/")
+    private const val BASE_URL = "https://tu-backend-kambia-pe.com/"
+
+    val instance: ApiService by lazy {
+        val retrofit = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        retrofit.create(ApiService::class.java)
+    }
+}
+// --- FIN: CÓDIGO DE RED AÑADIDO ---

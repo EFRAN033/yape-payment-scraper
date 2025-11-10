@@ -5,13 +5,13 @@ plugins {
 
 android {
     namespace = "com.example.yape_payment_scraper"
-    compileSdk {
-        version = release(36)
-    }
+    // 1. CORRECCIÓN: Volvemos a 36
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.yape_payment_scraper"
         minSdk = 24
+        // 2. CORRECCIÓN: Volvemos a 36
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -29,11 +29,12 @@ android {
         }
     }
     compileOptions {
+        // 3. CORRECCIÓN: Volvemos a tu versión original
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "11" // 4. CORRECCIÓN: Volvemos a tu versión original
     }
 }
 
@@ -46,4 +47,11 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    // --- 5. DEPENDENCIAS AÑADIDAS (que faltaban) ---
+    // Para hacer llamadas de red (API)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    // Para convertir JSON (el formato de tu API) a objetos de Kotlin
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    // --- FIN DE DEPENDENCIAS AÑADIDAS ---
 }
