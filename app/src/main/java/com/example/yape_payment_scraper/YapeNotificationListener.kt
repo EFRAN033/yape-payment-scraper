@@ -226,9 +226,8 @@ interface ApiService {
 
 // 3. Objeto Singleton para crear el cliente de Retrofit
 object RetrofitClient {
-    // !!! IMPORTANTE: CAMBIA ESTO POR LA URL DE TU BACKEND !!!
-    // (Ejemplo: "https://kambia-pe-backend.onrender.com/")
-    private const val BASE_URL = "https://tu-backend-kambia-pe.com/"
+    // ¡URL Corregida!
+    private const val BASE_URL = "http://83.147.39.44:8000/"
 
     val instance: ApiService by lazy {
         val retrofit = Retrofit.Builder()
