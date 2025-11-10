@@ -36,7 +36,8 @@ data class PaymentRecord(
 class YapeNotificationListener : NotificationListenerService() {
 
     // El ID de paquete de Yape
-    private val YAPE_PACKAGE_NAME = "com.bcp.yape"
+    // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
+    private val YAPE_PACKAGE_NAME = "com.bcp.innovacxion.yapeapp"
 
     // La Regex para extraer los pagos (coincide con tu imagen)
     private val paymentRegex = Regex("(?:Yape! )?(.+?) te (?:yapeó|envió un pago por) S/ (\\d+\\.?\\d*)")
