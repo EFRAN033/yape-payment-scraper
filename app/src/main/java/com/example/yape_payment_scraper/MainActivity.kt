@@ -28,17 +28,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private var isServiceEnabled = false
 
-    // Vistas del Sidebar
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
     private lateinit var toolbar: Toolbar
 
-    // Vistas de la UI
     private lateinit var powerButton: ImageButton
     private lateinit var statusTextView: TextView
     private lateinit var descriptionTextView: TextView
 
-    // Colores
     private val colorWhite by lazy { ContextCompat.getColor(this, R.color.white) }
     private val colorBlack by lazy { ContextCompat.getColor(this, R.color.black) }
     private val colorStatusOff by lazy { ContextCompat.getColor(this, R.color.status_off) }
@@ -51,7 +48,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        // Inicialización de Vistas
         drawerLayout = findViewById(R.id.drawer_layout)
         navigationView = findViewById(R.id.nav_view)
         toolbar = findViewById(R.id.toolbar)
@@ -59,11 +55,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         statusTextView = findViewById(R.id.statusTextView)
         descriptionTextView = findViewById(R.id.descriptionTextView)
 
-        // Configurar la Toolbar como ActionBar
         setSupportActionBar(toolbar)
         supportActionBar?.setTitle(R.string.app_name)
 
-        // Configurar el Navigation Drawer
         val toggle = ActionBarDrawerToggle(
             this,
             drawerLayout,
@@ -75,7 +69,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         toggle.syncState()
         navigationView.setNavigationItemSelectedListener(this)
 
-        // Manejar el botón de encendido/apagado (Power Button)
         powerButton.setOnClickListener {
             if (!isServiceEnabled) {
                 val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
@@ -85,7 +78,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
 
-        // Manejar el botón de retroceso (Back Button)
         onBackPressedDispatcher.addCallback(this) {
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                 drawerLayout.closeDrawer(GravityCompat.START)
@@ -94,7 +86,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
 
-        // Solicitar permiso de notificación
         checkAndRequestNotificationPermission()
     }
 
@@ -116,29 +107,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
 
-    // --- Funciones de Ayuda ---
-
-    /**
-     * Verifica si nuestro NotificationListenerService está activo en la configuración del sistema.
-     */
     private fun isNotificationServiceEnabled(): Boolean {
         val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
         val componentName = ComponentName(this, YapeNotificationListener::class.java)
         return enabledListeners?.contains(componentName.flattenToString()) == true
     }
 
-    /**
-     * Actualiza la UI (botón de encendido y textos de estado) según el estado del servicio.
-     */
     private fun updateUI() {
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Accede a las SharedPreferences que usa el servicio
+
         val sharedPrefs = getSharedPreferences(YapeNotificationListener.PREF_FILE_NAME, Context.MODE_PRIVATE)
         val editor = sharedPrefs.edit()
-        // --- FIN DE LA MODIFICACIÓN ---
+
 
         if (isServiceEnabled) {
-            // Estado ON (Activado)
+
             powerButton.setBackgroundResource(R.drawable.button_state_on)
             powerButton.setImageResource(R.drawable.ic_check)
             powerButton.imageTintList = ColorStateList.valueOf(colorWhite)
@@ -147,13 +129,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             statusTextView.setTextColor(colorWhite)
             descriptionTextView.setTextColor(colorWhite)
 
-            // --- INICIO DE LA MODIFICACIÓN ---
-            // Sincroniza el interruptor interno del servicio: PONER EN ON
             editor.putBoolean(YapeNotificationListener.PREF_SCANNING_ENABLED, true)
-            // --- FIN DE LA MODIFICACIÓN ---
+
 
         } else {
-            // Estado OFF (Desactivado)
+
             powerButton.setBackgroundResource(R.drawable.button_state_off)
             powerButton.setImageResource(R.drawable.ic_power)
             powerButton.imageTintList = ColorStateList.valueOf(colorBlack)
@@ -162,36 +142,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             statusTextView.setTextColor(colorStatusOff)
             descriptionTextView.setTextColor(colorStatusOff)
 
-            // --- INICIO DE LA MODIFICACIÓN ---
-            // Sincroniza el interruptor interno del servicio: PONER EN OFF
             editor.putBoolean(YapeNotificationListener.PREF_SCANNING_ENABLED, false)
-            // --- FIN DE LA MODIFICACIÓN ---
+
         }
 
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Aplica los cambios a SharedPreferences
         editor.apply()
-        // --- FIN DE LA MODIFICACIÓN ---
+
     }
 
-    // --- CÓDIGO NUEVO PARA PERMISOS ---
-
-    /**
-     * Verifica y solicita el permiso POST_NOTIFICATIONS si es necesario (Android 13+).
-     */
     private fun checkAndRequestNotificationPermission() {
-        // Solo necesario para Android 13 (TIRAMISU) y superior
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                // El permiso no está concedido, solicitarlo.
+
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_CODE)
             }
         }
     }
 
-    /**
-     * Maneja el resultado de la solicitud de permisos.
-     */
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == NOTIFICATION_PERMISSION_CODE) {
