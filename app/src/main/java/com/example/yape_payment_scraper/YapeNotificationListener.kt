@@ -157,6 +157,6 @@ class YapeNotificationListener : NotificationListenerService() {
         newHistory.add(record.toString())
         editor.putStringSet("history_list", newHistory)
         editor.apply()
-        Log.d("YapeScraper", "Registro guardado. Total de registros: ${newHistory.size}")
+        Log.d("YapeScraper", "Registro guardado. Totall de registros: ${newHistory.size}")
     }
 }
